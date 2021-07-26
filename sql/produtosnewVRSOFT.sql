@@ -1,23 +1,38 @@
-SELECT p.id, p.descricaocompleta, m.descricao AS mercadologico, p.validade, p.tiponaturezareceita, replace(regexp_replace(tn.descricao, E'[\n\r]+', ' - ', 'g' ), ',', '.') as "natureza da receita", mxf.ncm, replace(ct.descricao, ',', '.') as cest,
+/*Query com os principais campos do cadastro de produtos do ERP VRSoftware, utilizado para cadastro em migração para 
+novo ERP*/
+SELECT p.id, p.descricaocompleta, m.descricao AS mercadologico, p.validade, p.tiponaturezareceita, 
+/*replace feito para remover a vírgula para facilitar a importação no excel(o separador que é exportado é ','*/
+replace(regexp_replace(tn.descricao, E'[\n\r]+', ' - ', 'g' ), ',', '.') as "natureza da receita", mxf.ncm, replace(ct.descricao, ',', '.') as cest,
 tpc.cst as "cst pis/cofins cred", tp.cst as "cst pis/cofins deb", tp.descricao "pis e cofins", mxf.icms_cst_e, mxf.icms_cst_s,
 CASE mxf.icms_cst_e
 	WHEN '060' THEN 'SUBSTITUIDO'
 	WHEN '040' THEN 'ISENTO'
 	WHEN '090' THEN 'OUTROS'
 	WHEN '020' THEN 'REG EFETIVO 61.11/REG EFETIVO 33.33'
+	/*CST 000 PODE SER TANTO REGIME EFETIVO 18(CARGA LIQUIDA) QUANTO ANTECIPADO, COMO PODE SER 
+	TAMBÉM REGIME EFETIVO 28%(CARGA LÍQUIDA, BEBIDAS)*/ 
 	WHEN '000' THEN 'REG EFETIVO 18/18%/30%'
 	ELSE 'VERIFICAR O TIPO DO PRODUTO'
 	END,
 pf.cadastro_fornecedor,
+/*String que armazena todos os códigos de barras que o produto tem em um única tupla separado por ;*/
 string_agg(pa.codigobarras::text, ';') AS codigo_barras
+/*Não existe um foreign key da tabela mercadológico dentro da tabela produto, por isso é preciso utilizar todos os níveis 
+do mercadológico ao mesmo tempo como foreign key*/
 FROM produto as p JOIN mercadologico as m ON p.mercadologico1 = m.mercadologico1 AND p.mercadologico2 = m.mercadologico2 AND p.mercadologico3 = m.mercadologico3 AND p.mercadologico4 = m.mercadologico4
 LEFT JOIN tipopiscofins AS tp ON p.id_tipopiscofins = tp.id
 LEFT JOIN tipopiscofins AS tpc ON p.id_tipopiscofinscredito = tpc.id
+/*Existem naturezas da receita com o mesmo código, sendo diferenciado pelo pis e cofins,
+exemplo: 108 para o pis e cofins aliquota zero é  farinha, grumos e semolas... Para o pis e cofins 
+supensão a natureza da receita é Naftap petroquimica, pois isso é necessário adicionar o tipo de cest para validar*/
 LEFT JOIN tiponaturezareceita as tn ON p.tiponaturezareceita = tn.codigo and tp.cst = tn.cst
 LEFT JOIN cest as ct ON p.id_cest = ct.id
 JOIN mxf_vw_produtos as mxf ON p.id = mxf.codigo_produto 
 JOIN produtocomplemento AS pc ON p.id = pc.id_produto 
 JOIN produtoautomacao AS pa ON p.id = pa.id_produto
+/*Nessa consulta é adicionado o código do fornecedor e o código do produto que vem do fornecedor, armazenado como um 
+array separado por espaço, e separando cada tupla do array por ';'
+*/
 LEFT JOIN (SELECT id_produto, array_to_string(array_agg(id_fornecedor || ' ' || codigoexterno), ';') as cadastro_fornecedor
 	 FROM produtofornecedor
 		  	WHERE id_fornecedor IN (SELECT f.id
@@ -36,6 +51,10 @@ GROUP BY p.id, m.descricao, tn.descricao, mxf.ncm, ct.descricao, tpc.cst, tp.cst
 			mxf.icms_cst_e, mxf.icms_cst_s
 order by p.id;
 
+
+/* Query auxiliares para entender o funcionamento da query principal*/
+
+/*
 SELECT * FROM produtofornecedor LIMIT 10;
 
 SELECT f.id
@@ -127,6 +146,9 @@ show views;
 SELECT * FROM pg_views  
 ORDER BY viewname
 
+SELECT id_produto, to_char(custocomimposto, '9G999D999') FROM produtocomplemento
+where id_loja = 1;
+
 
 
 
@@ -180,3 +202,4 @@ SELECT * FROM produtoautomacao ORDER BY id_produto LIMIT 100;
      LEFT JOIN mercadologico m5 ON (((m5.mercadologico1 = p.mercadologico1) AND (m5.mercadologico2 = p.mercadologico2) AND (m5.mercadologico3 = p.mercadologico3) AND (m5.mercadologico4 = p.mercadologico4) AND (m5.mercadologico5 = p.mercadologico5) AND (m5.nivel = 5))))
      LEFT JOIN codigo ON ((codigo.id = p.id)))
   GROUP BY p.id, p.descricaocompleta, p.dataalteracao, m1.descricao, m3.descricao, m4.descricao, m5.descricao, codigo.barras, pc.id_loja, sc.descricao, pc.dataultimopreco, pc.precovenda;
+*/
