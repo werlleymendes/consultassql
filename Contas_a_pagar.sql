@@ -1,5 +1,4 @@
-/*Consulta de cadastro de fornecedor no sistema VRSOFTWARE com os principais campos, filtro por data e títulos abertos e 
-status(ativo, inativo)*/
+/*Consulta para migração dos bancos de dados do contas a pagar do VR seguindo o layout do Consinco*/
 
 SELECT f.id, f.razaosocial, f.nomefantasia, f.endereco, f.numero, f.bairro, m.descricao AS municipio, 
 to_char(f.cep, '00000-000') as cep, e.descricao AS estado, f.telefone, ti.descricao as "tipo inscricao", 
@@ -21,8 +20,7 @@ GROUP BY f.id, m.descricao, e.descricao, ti.descricao, tr.descricao, fpp.diasent
 ORDER BY f.id
 ;
 
-/*
-CONSULTAS AUXILIARES UTILIZADAS NO DESENVOLVIMENTO DA QUERY
+
 
 SELECT * FROM fornecedor limit 10;
 
@@ -44,15 +42,47 @@ SELECT * FROM tipofornecedor;
 SELECT tablename, schemaname FROM pg_tables;
 
 SELECT * FROM pagarfornecedorparcela LIMIT 1000;
-SELECT * FROM pagarfornecedor;
+SELECT * FROM pagarfornecedor LIMIT 1000;
 SELECT * FROM situacaopagarfornecedorparcela;
+select * from tipoentrada where descricao like '%RURAI%'
+
+SELECT
+/*A nossa loja 4 no VR será a loja N°3 no consinco, por isso a necessidade de mudar na query */
+CASE 
+when pf.id_loja = 1 then 1
+when pf.id_loja = 2 then 2
+when pf.id_loja = 4 then 3
+end as "NroEmpresa",
+/*CLASSIFICANDO OS TITULOS DE COMPRA DE MERCADORIA PARA REVENDA E PRODUTOR RURAL COMO DUPP E AS DESPESAS COMO DESP*/
+CASE 
+WHEN pf.id_tipoentrada = 6 THEN 'DUPP'
+WHEN pf.id_tipoentrada = 0 THEN 'DUPP'
+ELSE 'DESP'
+END as "CodEspecie", 
+/*RETORNAR O CNPJ SEM O DIGITO VERIFICADOR*/
+left(cast(f.cnpj as varchar(14)),-2) as "CodPessoa",
+left(cast(f.cnpj as varchar(14)),-2) as "CodPessoaNota",
+pf.numerodocumento AS "NroTitulo",
+ne.serie AS "SerieTitulo",
+pff.numeroparcela AS "NroParcela",
+ne.numeronota AS "NroDocumento"
+FROM pagarfornecedor as pf JOIN fornecedor as f
+ON pf.id_fornecedor = f.id
+LEFT JOIN pagarfornecedorparcela AS pff
+ON pff.id_pagarfornecedor = pf.id
+LEFT JOIN notaentrada AS ne
+ON pf.numerodocumento = ne.numeronota AND pf.id_fornecedor = ne.id_fornecedor
+WHERE pff.id_situacaopagarfornecedorparcela = 0
+LIMIT 1000;
+
+
 
 SELECT pf.id_fornecedor FROM pagarfornecedor as pf
 JOIN pagarfornecedorparcela as pfp ON pf.id = pfp.id_pagarfornecedor
 WHERE pfp.id_situacaopagarfornecedorparcela = 0
 GROUP BY pf.id_fornecedor;
 
-
+SELECT * FROM notaentrada LIMIT 10;
 
 SELECT
 column_name,
@@ -74,6 +104,7 @@ TO 'C:/git/sql/fornecedor.csv'
 DELIMITER ';'
 CSV HEADER
 
+SELECT * FROM fornecedor limit 10;
 
 SELECT * FROM agendafornecedor order by id_fornecedor;
 
@@ -92,4 +123,3 @@ SELECT * FROM fornecedordocumento;
 SELECT * FROM notaentrada limit 10;
 
 SELECT id_fornecedor, max(dataentrada) FROM notaentrada GROUP by id_fornecedor ORDER BY 1;
-*/
