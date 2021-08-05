@@ -59,13 +59,11 @@ WHEN pf.id_tipoentrada = 6 THEN 'DUPP'
 WHEN pf.id_tipoentrada = 0 THEN 'DUPP'
 ELSE 'DESP'
 END as "CodEspecie", 
-/*RETORNAR O CNPJ SEM O DIGITO VERIFICADOR*/
+/*RETORNAR O CNPJ/CPF SEM O DIGITO VERIFICADOR*/
 left(cast(f.cnpj as varchar(14)),-2) as "CodPessoa",
 left(cast(f.cnpj as varchar(14)),-2) as "CodPessoaNota",
-pf.numerodocumento AS "NroTitulo",
-ne.serie AS "SerieTitulo",
-pff.numeroparcela AS "NroParcela",
-ne.numeronota AS "NroDocumento"
+pf.numerodocumento AS "NroTitulo", ne.serie AS "SerieTitulo", pff.numeroparcela AS "NroParcela", 
+ne.numeronota AS "NroDocumento", pff.valor AS "VlrOriginal"
 FROM pagarfornecedor as pf JOIN fornecedor as f
 ON pf.id_fornecedor = f.id
 LEFT JOIN pagarfornecedorparcela AS pff
