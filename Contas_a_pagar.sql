@@ -39,7 +39,10 @@ SELECT * FROM tiporecebimento;
 
 SELECT * FROM tipofornecedor;
 
-SELECT tablename, schemaname FROM pg_tables;
+select * from pagarfornecedorparcelaabatimento limit 10;
+
+SELECT column_name, table_name FROM information_schema.columns
+WHERE column_name LIKE '%abat%';
 
 SELECT * FROM pagarfornecedorparcela LIMIT 1000;
 SELECT * FROM pagarfornecedor LIMIT 1000;
@@ -63,13 +66,19 @@ END as "CodEspecie",
 left(cast(f.cnpj as varchar(14)),-2) as "CodPessoa",
 left(cast(f.cnpj as varchar(14)),-2) as "CodPessoaNota",
 pf.numerodocumento AS "NroTitulo", ne.serie AS "SerieTitulo", pff.numeroparcela AS "NroParcela", 
-ne.numeronota AS "NroDocumento", pff.valor AS "VlrOriginal"
+ne.numeronota AS "NroDocumento", pff.valor AS "VlrOriginal", pf.dataemissao AS "DtaEmissao",
+pff.datavencimento AS "DtaEmissao", pff.datavencimento AS "DtaVencimento",
+pfa.valor AS "VlrDscFinanc", round((pfa.valor/pff.valor)*100,2) || '%' AS "PctDescFinanc",
+/*VER COM A VANDINHA SE É LANÇADO A DATA LIMITE OU SE REALMENTE É A DATA DO VENCIMENTO.*/
+pff.datavencimento AS "DtaLimDscFinanc", pf.dataentrada AS "DtaMovimento"
 FROM pagarfornecedor as pf JOIN fornecedor as f
 ON pf.id_fornecedor = f.id
 LEFT JOIN pagarfornecedorparcela AS pff
 ON pff.id_pagarfornecedor = pf.id
 LEFT JOIN notaentrada AS ne
 ON pf.numerodocumento = ne.numeronota AND pf.id_fornecedor = ne.id_fornecedor
+LEFT JOIN pagarfornecedorparcelaabatimento AS pfa
+ON pff.id = pfa.id_pagarfornecedorparcela
 WHERE pff.id_situacaopagarfornecedorparcela = 0
 LIMIT 1000;
 
