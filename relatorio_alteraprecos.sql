@@ -1,6 +1,3 @@
-SELECT * FROM notaentrada LIMIT 10;
-SELECT * FROM notaentradaitem LIMIT 10;
-
 SELECT nei.id_produto as "Código", p.descricaocompleta as produto, 
 sum(nei.quantidade * nei.qtdembalagem) as "quantidade total",  
 sum(nei.valortotal) as "valor total", 
@@ -23,5 +20,3 @@ AND p.mercadologico1 = 36
 AND ne.id_loja = 1
 AND c.notas > 1
 GROUP by 1,2;
-
-select * from mercadologico where descricao like 'FRUTA%';
